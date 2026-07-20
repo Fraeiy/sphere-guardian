@@ -85,7 +85,10 @@ export default function OverviewPage() {
             <CardDescription>Live health snapshot</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            {state.projects.slice(0, 6).map((p) => (
+            {state.projects
+              .filter((p) => p.tags.includes("app"))
+              .slice(0, 7)
+              .map((p) => (
               <div
                 key={p.id}
                 className="flex items-center justify-between rounded-xl border border-white/[0.05] bg-white/[0.02] px-3 py-2.5"
@@ -94,8 +97,21 @@ export default function OverviewPage() {
                   <div className="truncate text-sm font-medium text-zinc-200">
                     {p.name}
                   </div>
-                  <div className="text-[11px] text-zinc-500">
-                    {Math.round(p.apiLatencyMs)}ms · {p.activeAgents} agents
+                  <div className="truncate text-[11px] text-zinc-500">
+                    {Math.round(p.apiLatencyMs)}ms
+                    {p.url ? (
+                      <>
+                        {" · "}
+                        <a
+                          href={p.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-cyan-400/90 hover:text-cyan-300"
+                        >
+                          {p.url.replace(/^https?:\/\//, "")}
+                        </a>
+                      </>
+                    ) : null}
                   </div>
                 </div>
                 <span className={`text-xs font-medium capitalize ${statusColor(p.status)}`}>

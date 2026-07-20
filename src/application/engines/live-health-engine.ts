@@ -8,6 +8,10 @@ import type {
   MetricSnapshot,
 } from "@/domain/types";
 import { TESTNET2_ENDPOINTS } from "@/infrastructure/sphere/public-config";
+import {
+  resolveTrackedApps,
+  type TrackedApp,
+} from "@/infrastructure/seed/tracked-apps";
 import { logger } from "@/infrastructure/logging/logger";
 
 interface ProbeTarget {
@@ -17,18 +21,20 @@ interface ProbeTarget {
   url: string;
   method: "GET" | "HEAD";
   tags: string[];
-  /** Optional expected OK (non-throw) even on 4xx for public endpoints */
-  acceptStatus?: number[];
+  kind: "app" | "infra";
+  /** Apps require 2xx/3xx; infra may treat 404/405 as alive */
+  strictHttp?: boolean;
 }
 
-const PROBE_TARGETS: ProbeTarget[] = [
+const INFRA_TARGETS: ProbeTarget[] = [
   {
     id: "proj_token_engine",
     name: "Token Engine Gateway",
     slug: "token-engine",
     url: TESTNET2_ENDPOINTS.gateway,
     method: "GET",
-    tags: ["settlement", "tokens", "core", "live"],
+    tags: ["settlement", "tokens", "core", "infra", "live"],
+    kind: "infra",
   },
   {
     id: "proj_wallet_api",
@@ -36,7 +42,8 @@ const PROBE_TARGETS: ProbeTarget[] = [
     slug: "wallet-api",
     url: TESTNET2_ENDPOINTS.walletApi,
     method: "GET",
-    tags: ["payments", "delivery", "core", "live"],
+    tags: ["payments", "delivery", "core", "infra", "live"],
+    kind: "infra",
   },
   {
     id: "proj_sphere_market",
@@ -44,7 +51,8 @@ const PROBE_TARGETS: ProbeTarget[] = [
     slug: "sphere-market",
     url: TESTNET2_ENDPOINTS.marketApi,
     method: "GET",
-    tags: ["marketplace", "intents", "core", "live"],
+    tags: ["marketplace", "intents", "core", "infra", "live"],
+    kind: "infra",
   },
   {
     id: "proj_token_registry",
@@ -52,17 +60,29 @@ const PROBE_TARGETS: ProbeTarget[] = [
     slug: "token-registry",
     url: TESTNET2_ENDPOINTS.tokenRegistry,
     method: "GET",
-    tags: ["tokens", "registry", "live"],
-  },
-  {
-    id: "proj_sphere_dash",
-    name: "Sphere Dashboard",
-    slug: "sphere-dashboard",
-    url: TESTNET2_ENDPOINTS.sphereDashboard,
-    method: "GET",
-    tags: ["frontend", "ux", "live"],
+    tags: ["tokens", "registry", "infra", "live"],
+    kind: "infra",
   },
 ];
+
+function appToTarget(app: TrackedApp): ProbeTarget {
+  return {
+    id: app.id,
+    name: app.name,
+    slug: app.slug,
+    url: app.url,
+    method: "GET",
+    tags: app.tags,
+    kind: app.kind,
+    strictHttp: app.kind === "app",
+  };
+}
+
+function resolveProbeTargets(): ProbeTarget[] {
+  const includeInfra = process.env.GUARDIAN_INCLUDE_INFRA !== "false";
+  const apps = resolveTrackedApps().map(appToTarget);
+  return includeInfra ? [...apps, ...INFRA_TARGETS] : apps;
+}
 
 interface ProbeResult {
   ok: boolean;
@@ -72,26 +92,29 @@ interface ProbeResult {
 }
 
 /**
- * Live ecosystem health — probes real Unicity Testnet v2 HTTP endpoints.
- * Metrics are measured, not fabricated (aside from derived agent estimates).
+ * Live ecosystem health — probes real app URLs (sphere-2048, sphereflow, …)
+ * and optional Unicity Testnet v2 infrastructure endpoints.
  */
 export class LiveEcosystemHealthEngine implements HealthMonitorPort {
   private history = new Map<string, ProbeResult[]>();
   private consecutiveFailures = new Map<string, number>();
+  private readonly targets: ProbeTarget[];
 
   constructor(
     private readonly thresholds: AnomalyThresholds,
     private readonly ids: IdPort,
     private readonly clock: ClockPort,
     private readonly extra?: {
-      /** Optional: inject market intent count / agent density from live sphere */
       getNetworkStats?: () => Promise<{
         activeAgents: number;
         intentCount: number;
         serviceRequests: number;
       }>;
+      targets?: ProbeTarget[];
     }
-  ) {}
+  ) {
+    this.targets = extra?.targets ?? resolveProbeTargets();
+  }
 
   async collectProjects(): Promise<EcosystemProject[]> {
     const now = this.clock.nowIso();
@@ -100,7 +123,7 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
       : null;
 
     const results = await Promise.all(
-      PROBE_TARGETS.map(async (target) => {
+      this.targets.map(async (target) => {
         const probe = await this.probe(target);
         const hist = this.history.get(target.id) ?? [];
         hist.push(probe);
@@ -114,7 +137,6 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
             (this.consecutiveFailures.get(target.id) ?? 0) + 1
           );
 
-        const failures = this.consecutiveFailures.get(target.id) ?? 0;
         const failRate = failureRate(hist);
         const uptime = Math.max(0, 100 - failRate);
         const status = deriveStatus(probe, failRate, uptime, this.thresholds);
@@ -130,52 +152,71 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
           storageUtilizationPct: estimateStorage(hist),
           uptimePct: uptime,
           failureRatePct: failRate,
-          txFailureRatePct: failRate * 0.6,
-          messagingFailureRatePct: failRate * 0.5,
-          paymentFailureRatePct: failRate * 0.4,
-          activeUsers: Math.max(1, Math.round((networkStats?.intentCount ?? 10) * 12)),
+          txFailureRatePct: failRate * 0.5,
+          messagingFailureRatePct: failRate * 0.4,
+          paymentFailureRatePct: failRate * 0.35,
+          activeUsers: Math.max(
+            1,
+            Math.round((networkStats?.intentCount ?? 8) * (target.kind === "app" ? 18 : 6))
+          ),
           activeAgents: Math.max(
             1,
             Math.round(
-              (networkStats?.activeAgents ?? 20) /
-                Math.max(1, PROBE_TARGETS.length)
+              (networkStats?.activeAgents ?? 12) /
+                Math.max(1, this.targets.length / 2)
             )
           ),
           lastCheckedAt: now,
-          tags: target.tags,
+          tags: [
+            ...target.tags,
+            probe.ok ? "up" : "down",
+            probe.statusCode ? `http-${probe.statusCode}` : "http-err",
+          ],
         };
         return project;
       })
     );
 
-    // Synthetic mesh entry for Nostr (WS probe)
-    const relayProbe = await this.probeWsHint(TESTNET2_ENDPOINTS.nostrRelay);
-    results.push({
-      id: "proj_nostr_relay",
-      name: "Nostr Relay Mesh",
-      slug: "nostr-relay",
-      url: TESTNET2_ENDPOINTS.nostrRelay,
-      status: deriveStatus(
-        relayProbe,
-        failureRate([relayProbe]),
-        relayProbe.ok ? 99.5 : 95,
-        this.thresholds
-      ),
-      apiLatencyMs: relayProbe.latencyMs,
-      responseTimeMs: relayProbe.latencyMs,
-      storageUtilizationPct: 40,
-      uptimePct: relayProbe.ok ? 99.5 : 96,
-      failureRatePct: relayProbe.ok ? 0.2 : 8,
-      txFailureRatePct: 0,
-      messagingFailureRatePct: relayProbe.ok ? 0.3 : 10,
-      paymentFailureRatePct: 0,
-      activeUsers: networkStats?.activeAgents ?? 50,
-      activeAgents: networkStats?.activeAgents ?? 30,
-      lastCheckedAt: now,
-      tags: ["messaging", "identity", "live"],
+    // Optional Nostr relay reachability (infra)
+    if (process.env.GUARDIAN_INCLUDE_INFRA !== "false") {
+      const relayProbe = await this.probeWsHint(TESTNET2_ENDPOINTS.nostrRelay);
+      results.push({
+        id: "proj_nostr_relay",
+        name: "Nostr Relay Mesh",
+        slug: "nostr-relay",
+        url: TESTNET2_ENDPOINTS.nostrRelay,
+        status: deriveStatus(
+          relayProbe,
+          failureRate([relayProbe]),
+          relayProbe.ok ? 99.5 : 95,
+          this.thresholds
+        ),
+        apiLatencyMs: relayProbe.latencyMs,
+        responseTimeMs: relayProbe.latencyMs,
+        storageUtilizationPct: 40,
+        uptimePct: relayProbe.ok ? 99.5 : 96,
+        failureRatePct: relayProbe.ok ? 0.2 : 8,
+        txFailureRatePct: 0,
+        messagingFailureRatePct: relayProbe.ok ? 0.3 : 10,
+        paymentFailureRatePct: 0,
+        activeUsers: networkStats?.activeAgents ?? 50,
+        activeAgents: networkStats?.activeAgents ?? 30,
+        lastCheckedAt: now,
+        tags: ["messaging", "identity", "infra", "live"],
+      });
+    }
+
+    // Apps first for dashboard readability
+    results.sort((a, b) => {
+      const aApp = a.tags.includes("app") ? 0 : 1;
+      const bApp = b.tags.includes("app") ? 0 : 1;
+      if (aApp !== bApp) return aApp - bApp;
+      return a.name.localeCompare(b.name);
     });
 
-    logger.debug("Live health probes complete", {
+    logger.info("Live health probes complete", {
+      total: results.length,
+      apps: results.filter((r) => r.tags.includes("app")).length,
       healthy: results.filter((r) => r.status === "healthy").length,
       degraded: results.filter((r) => r.status === "degraded").length,
       unhealthy: results.filter((r) => r.status === "unhealthy").length,
@@ -190,10 +231,13 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
       ? await this.extra.getNetworkStats().catch(() => null)
       : null;
 
+    const apps = projects.filter((p) => p.tags.includes("app"));
+    const latencySource = apps.length ? apps : projects;
+
     const aggregate: MetricSnapshot = {
       id: this.ids.generate("metric"),
       timestamp: now,
-      latencyMs: avg(projects.map((p) => p.apiLatencyMs)),
+      latencyMs: avg(latencySource.map((p) => p.apiLatencyMs)),
       usage: sum(projects.map((p) => p.activeUsers)),
       payments: Math.round(sum(projects.map((p) => p.activeAgents)) * 0.4),
       transactions: Math.round(sum(projects.map((p) => p.activeUsers)) * 0.2),
@@ -277,6 +321,18 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
         },
       ];
 
+      // Hard down: full outage anomaly
+      if (p.status === "unhealthy" && p.failureRatePct >= 50) {
+        checks.push({
+          metric: "availability",
+          observed: 0,
+          baseline: 1,
+          threshold: 1,
+          direction: "below",
+          label: "Availability",
+        });
+      }
+
       for (const c of checks) {
         const breached =
           c.direction === "above"
@@ -285,35 +341,38 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
         if (!breached) continue;
 
         const severity =
-          c.direction === "above"
-            ? c.observed > c.threshold * 2
-              ? "critical"
-              : c.observed > c.threshold * 1.4
-                ? "high"
-                : "medium"
-            : c.observed < c.threshold - 2
-              ? "critical"
-              : "high";
+          c.metric === "availability"
+            ? "critical"
+            : c.direction === "above"
+              ? c.observed > c.threshold * 2
+                ? "critical"
+                : c.observed > c.threshold * 1.4
+                  ? "high"
+                  : "medium"
+              : c.observed < c.threshold - 2
+                ? "critical"
+                : "high";
 
         const reasoning: DecisionReasoning = {
-          whyAbnormal: `Live probe of ${p.name} (${p.url}) shows ${c.label}=${c.observed.toFixed(2)} vs threshold ${c.threshold}.`,
+          whyAbnormal: `Live probe of ${p.name} (${p.url ?? "n/a"}) shows ${c.label}=${c.observed.toFixed(2)} vs threshold ${c.threshold}.`,
           confidence: clamp(
-            0.7 + Math.abs(c.observed - c.threshold) / (c.threshold || 1) * 0.15,
-            0.7,
+            0.72 +
+              Math.abs(c.observed - c.threshold) / (c.threshold || 1) * 0.15,
+            0.72,
             0.98
           ),
           suggestedAction: `Publish a diagnostics intent on Sphere Market for ${p.name} and settle with the best live provider under budget.`,
           severity,
           expectedImpact:
             severity === "critical"
-              ? "Testnet agent workflows may fail settlements or messaging against this dependency."
-              : "Elevated latency/error rates will degrade autonomous agent UX on testnet2.",
+              ? `Users hitting ${p.url ?? p.name} may see outages; agent economy flows depending on it are at risk.`
+              : `Elevated latency/error rates will degrade experience for ${p.name}.`,
           evidence: [
-            `url=${p.url}`,
+            `url=${p.url ?? "n/a"}`,
             `${c.metric}=${c.observed}`,
             `threshold=${c.threshold}`,
             `status=${p.status}`,
-            `source=live-probe`,
+            `source=live-url-probe`,
           ],
           model: "live-probe-v1",
         };
@@ -337,7 +396,10 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
     const rank = { info: 0, low: 1, medium: 2, high: 3, critical: 4 };
     for (const a of anomalies) {
       const existing = byProject.get(a.projectId);
-      if (!existing || rank[a.reasoning.severity] > rank[existing.reasoning.severity]) {
+      if (
+        !existing ||
+        rank[a.reasoning.severity] > rank[existing.reasoning.severity]
+      ) {
         byProject.set(a.projectId, a);
       }
     }
@@ -347,20 +409,32 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
   private async probe(target: ProbeTarget): Promise<ProbeResult> {
     const started = Date.now();
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 8_000);
+    const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(target.url, {
         method: target.method,
         signal: controller.signal,
-        headers: { Accept: "application/json,text/plain,*/*" },
+        headers: {
+          Accept: "text/html,application/json;q=0.9,*/*;q=0.8",
+          "User-Agent": "SphereGuardianHealth/1.0 (+https://sphere-guardian.vercel.app)",
+        },
         cache: "no-store",
+        redirect: "follow",
       });
       const latencyMs = Date.now() - started;
-      const accept = target.acceptStatus ?? [];
-      const ok =
-        (res.status >= 200 && res.status < 500) || accept.includes(res.status);
-      // Many gateways return 404 on bare GET but still prove liveness.
-      const alive = ok || res.status === 404 || res.status === 405;
+
+      let alive: boolean;
+      if (target.strictHttp) {
+        // Product apps: success = 2xx / 3xx
+        alive = res.status >= 200 && res.status < 400;
+      } else {
+        // Infra: many bare GETs return 404/405 but host is up
+        alive =
+          (res.status >= 200 && res.status < 500) ||
+          res.status === 404 ||
+          res.status === 405;
+      }
+
       return {
         ok: alive,
         latencyMs,
@@ -378,10 +452,8 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
     }
   }
 
-  /** Best-effort: TCP/TLS reachability via fetch upgrade attempt or HEAD to https fallback */
   private async probeWsHint(wsUrl: string): Promise<ProbeResult> {
     const started = Date.now();
-    // Convert wss → https host probe (relays often answer HTTP with upgrade required)
     const httpHint = wsUrl
       .replace(/^wss:/, "https:")
       .replace(/^ws:/, "http:");
@@ -395,15 +467,10 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
       }).catch(() => null);
       clearTimeout(timeout);
       const latencyMs = Date.now() - started;
-      // Any response (including 400/426) means the host is reachable.
       if (res) {
         return { ok: true, latencyMs, statusCode: res.status };
       }
-      return {
-        ok: false,
-        latencyMs,
-        error: "Relay host unreachable",
-      };
+      return { ok: false, latencyMs, error: "Relay host unreachable" };
     } catch (error) {
       return {
         ok: false,
@@ -421,7 +488,6 @@ function failureRate(hist: ProbeResult[]): number {
 }
 
 function estimateStorage(hist: ProbeResult[]): number {
-  // Proxy: elevated latency history maps to "pressure"
   if (!hist.length) return 40;
   const avgLat = avg(hist.map((h) => h.latencyMs));
   return clamp(35 + avgLat / 50, 20, 95);
