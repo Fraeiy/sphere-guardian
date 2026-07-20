@@ -12,7 +12,10 @@ export class FileStateStore implements StateStorePort {
   private writeQueue: Promise<void> = Promise.resolve();
 
   constructor(dataDir = process.env.GUARDIAN_DATA_DIR ?? ".data") {
-    this.filePath = path.join(process.cwd(), dataDir, "guardian-state.json");
+    const root = path.isAbsolute(dataDir)
+      ? dataDir
+      : path.join(process.cwd(), dataDir);
+    this.filePath = path.join(root, "guardian-state.json");
   }
 
   async load(): Promise<GuardianStateSnapshot | null> {

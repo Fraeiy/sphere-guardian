@@ -6,6 +6,10 @@ import {
   LiveSphereFacade,
   createLiveSphereFacade,
 } from "@/infrastructure/sphere/live-sphere";
+import {
+  resolvePeerTokensDir,
+  resolvePeerWalletDataDir,
+} from "@/infrastructure/sphere/public-config";
 
 /**
  * Second live Sphere identity that provides diagnostics on testnet2.
@@ -20,8 +24,8 @@ export class LivePeerDiagnosticAgent {
   constructor(nametag: string) {
     this.nametag = nametag.replace(/^@/, "");
     this.facade = createLiveSphereFacade(this.nametag, {
-      dataDir: process.env.SPHERE_PEER_DATA_DIR ?? ".data/sphere-peer-wallet",
-      tokensDir: process.env.SPHERE_PEER_TOKENS_DIR ?? ".data/sphere-peer-tokens",
+      dataDir: resolvePeerWalletDataDir(),
+      tokensDir: resolvePeerTokensDir(),
       deviceId:
         process.env.SPHERE_PEER_DEVICE_ID ?? "sphere-guardian-peer-device",
     });

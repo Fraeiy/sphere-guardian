@@ -22,7 +22,10 @@ import {
   createLivePeerAgent,
   type LivePeerDiagnosticAgent,
 } from "@/infrastructure/sphere/live-peer-agent";
-import { resolveSphereMode } from "@/infrastructure/sphere/public-config";
+import {
+  resolveDataRoot,
+  resolveSphereMode,
+} from "@/infrastructure/sphere/public-config";
 import { clock } from "@/infrastructure/utils/clock";
 import { ids } from "@/infrastructure/utils/id";
 import { rateLimiter } from "@/infrastructure/utils/rate-limiter";
@@ -48,7 +51,7 @@ function createStore(): StateStorePort {
   if (process.env.DATABASE_URL) {
     return new PostgresStateStore(process.env.DATABASE_URL);
   }
-  return new FileStateStore(process.env.GUARDIAN_DATA_DIR ?? ".data");
+  return new FileStateStore(resolveDataRoot());
 }
 
 function createSphere(nametag: string, mode: "mock" | "live"): SphereFacadePort {

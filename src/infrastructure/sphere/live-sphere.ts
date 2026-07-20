@@ -12,6 +12,8 @@ import { clock } from "@/infrastructure/utils/clock";
 import { ids } from "@/infrastructure/utils/id";
 import {
   resolveOracleApiKey,
+  resolveTokensDir,
+  resolveWalletDataDir,
   TESTNET2_ENDPOINTS,
 } from "@/infrastructure/sphere/public-config";
 
@@ -412,12 +414,8 @@ export function createLiveSphereFacade(
   return new LiveSphereFacade({
     nametag: nametag.replace(/^@/, ""),
     network: overrides?.network ?? process.env.SPHERE_NETWORK ?? "testnet2",
-    dataDir:
-      overrides?.dataDir ?? process.env.SPHERE_DATA_DIR ?? ".data/sphere-wallet",
-    tokensDir:
-      overrides?.tokensDir ??
-      process.env.SPHERE_TOKENS_DIR ??
-      ".data/sphere-tokens",
+    dataDir: overrides?.dataDir ?? resolveWalletDataDir(),
+    tokensDir: overrides?.tokensDir ?? resolveTokensDir(),
     deviceId:
       overrides?.deviceId ??
       process.env.SPHERE_DEVICE_ID ??
