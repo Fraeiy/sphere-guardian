@@ -130,8 +130,9 @@ export class GuardianAgent {
 
     await this.persistAndEmit();
 
-    // Immediate first tick, then interval
-    void this.safeTick();
+    // Complete the first tick before start() resolves so API consumers
+    // (and Vercel cold starts) see real probe data immediately.
+    await this.safeTick();
     this.timer = setInterval(() => {
       void this.safeTick();
     }, this.config.tickIntervalMs);
