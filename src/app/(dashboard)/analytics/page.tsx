@@ -64,9 +64,9 @@ export default function AnalyticsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Operations multi-series</CardTitle>
+            <CardTitle>Probe & market multi-series</CardTitle>
             <CardDescription>
-              Agents · payments · transactions · incidents · service requests
+              Healthy targets · probed count · unhealthy · market intents · market agents
             </CardDescription>
           </CardHeader>
           <CardContent>

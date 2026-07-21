@@ -73,12 +73,25 @@ export function MultiMetricChart({ metrics }: { metrics: MetricSnapshot[] }) {
           <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
           <XAxis dataKey="t" tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
-          <Tooltip contentStyle={tooltipStyle} />
-          <Line type="monotone" dataKey="agents" stroke="#a78bfa" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="payments" stroke="#34d399" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="transactions" stroke="#fbbf24" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="incidents" stroke="#fb7185" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="serviceRequests" stroke="#22d3ee" strokeWidth={2} dot={false} />
+          <Tooltip
+            contentStyle={tooltipStyle}
+            formatter={(value, name) => {
+              const labels: Record<string, string> = {
+                agents: "market agents (live search)",
+                payments: "unused",
+                transactions: "targets probed",
+                incidents: "unhealthy targets",
+                serviceRequests: "market intents (live)",
+                usage: "targets healthy",
+              };
+              return [value, labels[String(name)] ?? String(name)];
+            }}
+          />
+          <Line type="monotone" dataKey="usage" stroke="#34d399" strokeWidth={2} dot={false} name="usage" />
+          <Line type="monotone" dataKey="transactions" stroke="#fbbf24" strokeWidth={2} dot={false} name="transactions" />
+          <Line type="monotone" dataKey="incidents" stroke="#fb7185" strokeWidth={2} dot={false} name="incidents" />
+          <Line type="monotone" dataKey="serviceRequests" stroke="#22d3ee" strokeWidth={2} dot={false} name="serviceRequests" />
+          <Line type="monotone" dataKey="agents" stroke="#a78bfa" strokeWidth={2} dot={false} name="agents" />
         </LineChart>
       </ResponsiveContainer>
     </div>

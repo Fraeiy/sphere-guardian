@@ -9,11 +9,17 @@ import { useMemo, useState } from "react";
 
 type Filter = "all" | "app" | "infra";
 
+function httpStatusFromTags(tags: string[]): string {
+  const hit = tags.find((t) => t.startsWith("http-"));
+  if (!hit) return "—";
+  if (hit === "http-err") return "ERR";
+  return hit.replace("http-", "");
+}
+
 export default function ProjectsPage() {
   const { state } = useGuardian();
   const [filter, setFilter] = useState<Filter>("all");
 
-  // Hooks must run unconditionally (before any early return).
   const allProjects = state?.projects ?? [];
 
   const projects = useMemo(() => {
@@ -48,7 +54,7 @@ export default function ProjectsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Live URL probes — product apps and Unicity infrastructure.
+            Live HTTP probes only — latency, status code, probe uptime. No fake user counts.
           </p>
         </div>
         <div className="flex gap-2">
@@ -89,6 +95,7 @@ export default function ProjectsPage() {
           const lastChecked = p.lastCheckedAt
             ? new Date(p.lastCheckedAt).toLocaleTimeString()
             : "—";
+          const http = httpStatusFromTags(tags);
           return (
             <Card key={p.id}>
               <CardHeader className="flex-row items-start justify-between gap-3">
@@ -130,50 +137,38 @@ export default function ProjectsPage() {
                 </Badge>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                   <Metric
                     label="Latency"
                     value={`${Math.round(p.apiLatencyMs ?? 0)}ms`}
                   />
+                  <Metric label="HTTP" value={http} />
                   <Metric
-                    label="Response"
-                    value={`${Math.round(p.responseTimeMs ?? 0)}ms`}
+                    label="Probe uptime"
+                    value={formatPct(p.uptimePct ?? 0)}
                   />
-                  <Metric label="Uptime" value={formatPct(p.uptimePct ?? 0)} />
                   <Metric
-                    label="Failures"
+                    label="Probe fail %"
                     value={formatPct(p.failureRatePct ?? 0)}
-                  />
-                  <Metric
-                    label="Users (est.)"
-                    value={String(p.activeUsers ?? 0)}
-                  />
-                  <Metric
-                    label="Agents (est.)"
-                    value={String(p.activeAgents ?? 0)}
                   />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-1.5">
                   {tags
-                    .filter((t) => !t.startsWith("http-"))
-                    .slice(0, 8)
+                    .filter(
+                      (t) =>
+                        !t.startsWith("http-") && t !== "up" && t !== "down"
+                    )
+                    .slice(0, 6)
                     .map((t) => (
-                      <Badge
-                        key={t}
-                        tone={
-                          t === "up"
-                            ? "success"
-                            : t === "down"
-                              ? "danger"
-                              : "neutral"
-                        }
-                      >
+                      <Badge key={t} tone="neutral">
                         {t}
                       </Badge>
                     ))}
+                  {tags.includes("up") && <Badge tone="success">up</Badge>}
+                  {tags.includes("down") && <Badge tone="danger">down</Badge>}
                 </div>
                 <div className={`mt-3 text-xs ${statusColor(p.status)}`}>
-                  Last checked {lastChecked}
+                  Last probe {lastChecked} · measured via public URL only
                 </div>
               </CardContent>
             </Card>

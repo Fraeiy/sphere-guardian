@@ -141,6 +141,8 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
         const uptime = Math.max(0, 100 - failRate);
         const status = deriveStatus(probe, failRate, uptime, this.thresholds);
 
+        // Only measured fields are non-zero. Users/agents/storage/tx rates are
+        // NOT inventable from a public URL probe — keep them at 0.
         const project: EcosystemProject = {
           id: target.id,
           name: target.name,
@@ -149,28 +151,21 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
           status,
           apiLatencyMs: probe.latencyMs,
           responseTimeMs: probe.latencyMs,
-          storageUtilizationPct: estimateStorage(hist),
+          storageUtilizationPct: 0,
           uptimePct: uptime,
           failureRatePct: failRate,
-          txFailureRatePct: failRate * 0.5,
-          messagingFailureRatePct: failRate * 0.4,
-          paymentFailureRatePct: failRate * 0.35,
-          activeUsers: Math.max(
-            1,
-            Math.round((networkStats?.intentCount ?? 8) * (target.kind === "app" ? 18 : 6))
-          ),
-          activeAgents: Math.max(
-            1,
-            Math.round(
-              (networkStats?.activeAgents ?? 12) /
-                Math.max(1, this.targets.length / 2)
-            )
-          ),
+          txFailureRatePct: 0,
+          messagingFailureRatePct: 0,
+          paymentFailureRatePct: 0,
+          activeUsers: 0,
+          activeAgents: 0,
           lastCheckedAt: now,
           tags: [
             ...target.tags,
             probe.ok ? "up" : "down",
-            probe.statusCode ? `http-${probe.statusCode}` : "http-err",
+            probe.statusCode != null
+              ? `http-${probe.statusCode}`
+              : "http-err",
           ],
         };
         return project;
@@ -179,30 +174,41 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
 
     // Optional Nostr relay reachability (infra)
     if (process.env.GUARDIAN_INCLUDE_INFRA !== "false") {
+      const relayHistKey = "proj_nostr_relay";
       const relayProbe = await this.probeWsHint(TESTNET2_ENDPOINTS.nostrRelay);
+      const rHist = this.history.get(relayHistKey) ?? [];
+      rHist.push(relayProbe);
+      if (rHist.length > 30) rHist.shift();
+      this.history.set(relayHistKey, rHist);
+      const rFail = failureRate(rHist);
+      const rUp = Math.max(0, 100 - rFail);
       results.push({
-        id: "proj_nostr_relay",
+        id: relayHistKey,
         name: "Nostr Relay Mesh",
         slug: "nostr-relay",
         url: TESTNET2_ENDPOINTS.nostrRelay,
-        status: deriveStatus(
-          relayProbe,
-          failureRate([relayProbe]),
-          relayProbe.ok ? 99.5 : 95,
-          this.thresholds
-        ),
+        status: deriveStatus(relayProbe, rFail, rUp, this.thresholds),
         apiLatencyMs: relayProbe.latencyMs,
         responseTimeMs: relayProbe.latencyMs,
-        storageUtilizationPct: 40,
-        uptimePct: relayProbe.ok ? 99.5 : 96,
-        failureRatePct: relayProbe.ok ? 0.2 : 8,
+        storageUtilizationPct: 0,
+        uptimePct: rUp,
+        failureRatePct: rFail,
         txFailureRatePct: 0,
-        messagingFailureRatePct: relayProbe.ok ? 0.3 : 10,
+        messagingFailureRatePct: 0,
         paymentFailureRatePct: 0,
-        activeUsers: networkStats?.activeAgents ?? 50,
-        activeAgents: networkStats?.activeAgents ?? 30,
+        activeUsers: 0,
+        activeAgents: 0,
         lastCheckedAt: now,
-        tags: ["messaging", "identity", "infra", "live"],
+        tags: [
+          "messaging",
+          "identity",
+          "infra",
+          "live",
+          relayProbe.ok ? "up" : "down",
+          relayProbe.statusCode != null
+            ? `http-${relayProbe.statusCode}`
+            : "http-err",
+        ],
       });
     }
 
@@ -231,25 +237,24 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
       ? await this.extra.getNetworkStats().catch(() => null)
       : null;
 
-    const apps = projects.filter((p) => p.tags.includes("app"));
+    const apps = projects.filter((p) => (p.tags ?? []).includes("app"));
     const latencySource = apps.length ? apps : projects;
+    const upCount = projects.filter((p) => p.status === "healthy").length;
+    const downCount = projects.filter((p) => p.status === "unhealthy").length;
 
+    // Metrics series: only real probe aggregates + optional live market counts.
     const aggregate: MetricSnapshot = {
       id: this.ids.generate("metric"),
       timestamp: now,
       latencyMs: avg(latencySource.map((p) => p.apiLatencyMs)),
-      usage: sum(projects.map((p) => p.activeUsers)),
-      payments: Math.round(sum(projects.map((p) => p.activeAgents)) * 0.4),
-      transactions: Math.round(sum(projects.map((p) => p.activeUsers)) * 0.2),
+      usage: upCount, // # targets currently healthy (not "users")
+      payments: 0,
+      transactions: projects.length,
       incidents: projects.filter((p) => p.status !== "healthy").length,
-      activeAgents:
-        networkStats?.activeAgents ?? sum(projects.map((p) => p.activeAgents)),
-      serviceRequests:
-        networkStats?.serviceRequests ??
-        networkStats?.intentCount ??
-        Math.round(sum(projects.map((p) => p.activeAgents)) * 0.1),
+      activeAgents: networkStats?.activeAgents ?? 0,
+      serviceRequests: networkStats?.serviceRequests ?? networkStats?.intentCount ?? 0,
       uptimePct: avg(projects.map((p) => p.uptimePct)),
-      storageUtilizationPct: avg(projects.map((p) => p.storageUtilizationPct)),
+      storageUtilizationPct: downCount, // reuse slot as "down count" for charts only
     };
 
     const perProject = projects.map((p) => ({
@@ -257,14 +262,14 @@ export class LiveEcosystemHealthEngine implements HealthMonitorPort {
       timestamp: now,
       projectId: p.id,
       latencyMs: p.apiLatencyMs,
-      usage: p.activeUsers,
-      payments: Math.round(p.activeAgents * 0.5),
-      transactions: Math.round(p.activeUsers * 0.2),
+      usage: p.status === "healthy" ? 1 : 0,
+      payments: 0,
+      transactions: 0,
       incidents: p.status === "healthy" ? 0 : 1,
-      activeAgents: p.activeAgents,
-      serviceRequests: Math.round(p.activeAgents * 0.1),
+      activeAgents: 0,
+      serviceRequests: 0,
       uptimePct: p.uptimePct,
-      storageUtilizationPct: p.storageUtilizationPct,
+      storageUtilizationPct: 0,
     }));
 
     return [aggregate, ...perProject];
@@ -485,12 +490,6 @@ function failureRate(hist: ProbeResult[]): number {
   if (!hist.length) return 0;
   const fails = hist.filter((h) => !h.ok).length;
   return (fails / hist.length) * 100;
-}
-
-function estimateStorage(hist: ProbeResult[]): number {
-  if (!hist.length) return 40;
-  const avgLat = avg(hist.map((h) => h.latencyMs));
-  return clamp(35 + avgLat / 50, 20, 95);
 }
 
 function deriveStatus(

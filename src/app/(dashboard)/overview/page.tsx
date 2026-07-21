@@ -60,9 +60,9 @@ export default function OverviewPage() {
           accent="emerald"
         />
         <StatCard
-          label="Active agents"
-          value={formatNumber(latest?.activeAgents ?? 0, 0)}
-          hint={`${formatNumber(latest?.serviceRequests ?? 0, 0)} service requests`}
+          label="Targets up"
+          value={`${state.projects.filter((p) => p.status === "healthy").length}/${state.projects.length || 0}`}
+          hint="From live URL probes (not analytics users)"
           icon={Bot}
           accent="violet"
         />
@@ -81,8 +81,8 @@ export default function OverviewPage() {
 
         <Card className="xl:col-span-2">
           <CardHeader>
-            <CardTitle>Projects</CardTitle>
-            <CardDescription>Live health snapshot</CardDescription>
+            <CardTitle>Apps</CardTitle>
+            <CardDescription>Live URL latency (real probes)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {state.projects
