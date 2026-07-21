@@ -55,7 +55,7 @@ export default function ServicesPage() {
             <CardContent className="space-y-4">
               <div className="flex items-end justify-between">
                 <div>
-                  <div className="text-2xl font-semibold text-cyan-300">
+                  <div className="text-2xl font-semibold text-[var(--primary-bright)]">
                     {s.price}{" "}
                     <span className="text-sm font-normal text-zinc-400">
                       {s.currency}

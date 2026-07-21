@@ -35,10 +35,11 @@ function series(metrics: MetricSnapshot[]) {
 }
 
 const tooltipStyle = {
-  background: "#111218",
-  border: "1px solid rgba(255,255,255,0.08)",
+  background: "#12100e",
+  border: "1px solid rgba(232,163,23,0.2)",
   borderRadius: 12,
   fontSize: 12,
+  color: "#f7f1e8",
 };
 
 export function LatencyChart({ metrics }: { metrics: MetricSnapshot[] }) {
@@ -49,15 +50,16 @@ export function LatencyChart({ metrics }: { metrics: MetricSnapshot[] }) {
         <AreaChart data={data}>
           <defs>
             <linearGradient id="lat" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#22d3ee" stopOpacity={0.35} />
-              <stop offset="100%" stopColor="#22d3ee" stopOpacity={0} />
+              <stop offset="0%" stopColor="#e8a317" stopOpacity={0.4} />
+              <stop offset="55%" stopColor="#e87a1a" stopOpacity={0.15} />
+              <stop offset="100%" stopColor="#c93a2a" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-          <XAxis dataKey="t" tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
+          <CartesianGrid stroke="rgba(232,163,23,0.06)" vertical={false} />
+          <XAxis dataKey="t" tick={{ fill: "#9a9084", fontSize: 10 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill: "#9a9084", fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
           <Tooltip contentStyle={tooltipStyle} />
-          <Area type="monotone" dataKey="latency" stroke="#22d3ee" fill="url(#lat)" strokeWidth={2} />
+          <Area type="monotone" dataKey="latency" stroke="#e8a317" fill="url(#lat)" strokeWidth={2} />
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -70,9 +72,9 @@ export function MultiMetricChart({ metrics }: { metrics: MetricSnapshot[] }) {
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
-          <CartesianGrid stroke="rgba(255,255,255,0.04)" vertical={false} />
-          <XAxis dataKey="t" tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fill: "#71717a", fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
+          <CartesianGrid stroke="rgba(232,163,23,0.06)" vertical={false} />
+          <XAxis dataKey="t" tick={{ fill: "#9a9084", fontSize: 10 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fill: "#9a9084", fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
           <Tooltip
             contentStyle={tooltipStyle}
             formatter={(value, name) => {
@@ -88,10 +90,10 @@ export function MultiMetricChart({ metrics }: { metrics: MetricSnapshot[] }) {
             }}
           />
           <Line type="monotone" dataKey="usage" stroke="#34d399" strokeWidth={2} dot={false} name="usage" />
-          <Line type="monotone" dataKey="transactions" stroke="#fbbf24" strokeWidth={2} dot={false} name="transactions" />
-          <Line type="monotone" dataKey="incidents" stroke="#fb7185" strokeWidth={2} dot={false} name="incidents" />
-          <Line type="monotone" dataKey="serviceRequests" stroke="#22d3ee" strokeWidth={2} dot={false} name="serviceRequests" />
-          <Line type="monotone" dataKey="agents" stroke="#a78bfa" strokeWidth={2} dot={false} name="agents" />
+          <Line type="monotone" dataKey="transactions" stroke="#e8a317" strokeWidth={2} dot={false} name="transactions" />
+          <Line type="monotone" dataKey="incidents" stroke="#c93a2a" strokeWidth={2} dot={false} name="incidents" />
+          <Line type="monotone" dataKey="serviceRequests" stroke="#e87a1a" strokeWidth={2} dot={false} name="serviceRequests" />
+          <Line type="monotone" dataKey="agents" stroke="#f0c14d" strokeWidth={2} dot={false} name="agents" />
         </LineChart>
       </ResponsiveContainer>
     </div>

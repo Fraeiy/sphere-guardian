@@ -14,6 +14,7 @@ import {
   Store,
   Wallet,
   Shield,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,24 +30,48 @@ const NAV = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  open = false,
+  onClose,
+}: {
+  open?: boolean;
+  onClose?: () => void;
+}) {
   const pathname = usePathname();
 
-  return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-white/[0.06] bg-[#08090d]/90 backdrop-blur-xl">
-      <div className="flex items-center gap-3 border-b border-white/[0.06] px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400/20 to-violet-500/20 ring-1 ring-cyan-400/30">
-          <Shield className="h-5 w-5 text-cyan-300" />
-        </div>
-        <div>
-          <div className="text-sm font-semibold tracking-tight text-zinc-50">
-            Sphere Guardian
+  const body = (
+    <>
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-4 sm:px-5 sm:py-5">
+        <div className="flex items-center gap-3">
+          <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[rgba(232,163,23,0.35)] via-[rgba(232,122,26,0.2)] to-[rgba(201,58,42,0.25)] ring-1 ring-[var(--border-strong)] shadow-[0_8px_24px_-10px_rgba(232,163,23,0.55)]">
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded-xl bg-gradient-to-t from-transparent to-white/10"
+            />
+            <Shield className="relative h-5 w-5 text-[#f5d78e]" />
           </div>
-          <div className="text-[11px] text-zinc-500">Autonomous NOC Agent</div>
+          <div>
+            <div className="text-sm font-semibold tracking-tight gold-text">
+              Sphere Guardian
+            </div>
+            <div className="text-[11px] text-[var(--muted)]">
+              Autonomous NOC Agent
+            </div>
+          </div>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--border)] bg-white/[0.03] text-[var(--muted-strong)] lg:hidden"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
-      <nav className="flex-1 space-y-0.5 p-3">
+      <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
         {NAV.map((item) => {
           const active =
             pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -55,38 +80,76 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onClose}
               className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
+                "group flex min-h-[44px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all",
                 active
-                  ? "bg-white/[0.06] text-zinc-50 shadow-inner ring-1 ring-white/[0.06]"
-                  : "text-zinc-400 hover:bg-white/[0.03] hover:text-zinc-200"
+                  ? "bg-gradient-to-r from-[rgba(232,163,23,0.16)] to-[rgba(232,122,26,0.06)] text-[var(--foreground)] shadow-[0_1px_0_rgba(255,220,160,0.08)_inset] ring-1 ring-[var(--border-strong)]"
+                  : "text-[var(--muted)] hover:bg-[rgba(232,163,23,0.06)] hover:text-[var(--foreground)]"
               )}
             >
               <Icon
                 className={cn(
-                  "h-4 w-4",
-                  active ? "text-cyan-300" : "text-zinc-500 group-hover:text-zinc-300"
+                  "h-4 w-4 shrink-0",
+                  active
+                    ? "text-[var(--primary-bright)]"
+                    : "text-[var(--muted)] group-hover:text-[var(--primary)]"
                 )}
               />
-              {item.label}
+              <span className="truncate">{item.label}</span>
             </Link>
           );
         })}
       </nav>
 
-      <div className="border-t border-white/[0.06] p-4">
-        <div className="flex items-center gap-2 rounded-xl bg-white/[0.03] px-3 py-2.5 ring-1 ring-white/[0.05]">
-          <Bot className="h-4 w-4 text-violet-300" />
+      <div className="border-t border-[var(--border)] p-4 safe-pb">
+        <div className="depth-inset flex items-center gap-2 rounded-xl px-3 py-2.5 ring-1 ring-[var(--border)]">
+          <Bot className="h-4 w-4 shrink-0 text-[var(--orange)]" />
           <div className="min-w-0">
-            <div className="truncate text-xs font-medium text-zinc-200">
+            <div className="truncate text-xs font-medium text-[var(--foreground)]">
               Machine economy ready
             </div>
-            <div className="truncate text-[10px] text-zinc-500">
+            <div className="truncate text-[10px] text-[var(--muted)]">
               Identity · Wallet · Market · Settle
             </div>
           </div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop */}
+      <aside className="depth-panel relative z-20 hidden h-full w-64 shrink-0 flex-col border-r border-[var(--border)] lg:flex">
+        {body}
+      </aside>
+
+      {/* Mobile drawer */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 lg:hidden",
+          open ? "pointer-events-auto" : "pointer-events-none"
+        )}
+      >
+        <button
+          type="button"
+          aria-label="Close menu overlay"
+          onClick={onClose}
+          className={cn(
+            "absolute inset-0 bg-black/60 transition-opacity duration-300",
+            open ? "opacity-100" : "opacity-0"
+          )}
+        />
+        <aside
+          className={cn(
+            "depth-panel absolute inset-y-0 left-0 flex w-[min(18rem,88vw)] flex-col border-r border-[var(--border)] transition-transform duration-300 ease-out",
+            open ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          {body}
+        </aside>
+      </div>
+    </>
   );
 }

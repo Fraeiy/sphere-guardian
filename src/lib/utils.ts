@@ -30,15 +30,15 @@ export function relativeTime(iso: string): string {
 export function severityColor(severity?: string): string {
   switch (severity) {
     case "critical":
-      return "text-rose-400";
+      return "text-[#e87a6a]";
     case "high":
-      return "text-orange-400";
+      return "text-[var(--orange)]";
     case "medium":
-      return "text-amber-400";
+      return "text-[var(--primary-bright)]";
     case "low":
-      return "text-sky-400";
+      return "text-[#f0c14d]";
     default:
-      return "text-zinc-400";
+      return "text-[var(--muted)]";
   }
 }
 
@@ -52,12 +52,12 @@ export function statusColor(status?: string): string {
     case "degraded":
     case "negotiating":
     case "payment_pending":
-      return "text-amber-400";
+      return "text-[var(--primary-bright)]";
     case "unhealthy":
     case "failed":
     case "critical":
-      return "text-rose-400";
+      return "text-[#e87a6a]";
     default:
-      return "text-zinc-400";
+      return "text-[var(--muted)]";
   }
 }

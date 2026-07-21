@@ -13,9 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sphere Guardian AI",
+  title: "Sphere Guardian",
   description:
     "Autonomous Network Operations Agent for Unicity Sphere — identity, wallet, intents, settlement, and paid diagnostics.",
+  themeColor: "#e8a317",
 };
 
 export default function RootLayout({

@@ -81,7 +81,7 @@ export default function TransactionsPage() {
             <CardContent className="space-y-2 p-5 text-sm">
               <div className="flex justify-between">
                 <span className="font-medium text-zinc-100">{s.recipient}</span>
-                <span className="text-cyan-300">
+                <span className="text-[var(--primary-bright)]">
                   {s.amount} {s.currency}
                 </span>
               </div>

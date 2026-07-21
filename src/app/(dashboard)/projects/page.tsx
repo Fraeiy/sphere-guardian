@@ -71,7 +71,7 @@ export default function ProjectsPage() {
               onClick={() => setFilter(key)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
                 filter === key
-                  ? "bg-cyan-500/15 text-cyan-200 ring-1 ring-cyan-500/30"
+                  ? "bg-[rgba(232,163,23,0.14)] text-[var(--primary-bright)] ring-1 ring-[rgba(232,163,23,0.3)]"
                   : "bg-white/[0.03] text-zinc-400 ring-1 ring-white/[0.06] hover:text-zinc-200"
               }`}
             >
@@ -102,9 +102,9 @@ export default function ProjectsPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     {isApp ? (
-                      <Globe className="h-4 w-4 shrink-0 text-cyan-300" />
+                      <Globe className="h-4 w-4 shrink-0 text-[var(--primary-bright)]" />
                     ) : (
-                      <Server className="h-4 w-4 shrink-0 text-violet-300" />
+                      <Server className="h-4 w-4 shrink-0 text-[var(--orange)]" />
                     )}
                     <CardTitle className="truncate text-base">{p.name}</CardTitle>
                   </div>
@@ -113,7 +113,7 @@ export default function ProjectsPage() {
                       href={p.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-1.5 inline-flex max-w-full items-center gap-1 truncate text-xs text-cyan-300/90 hover:text-cyan-200"
+                      className="mt-1.5 inline-flex max-w-full items-center gap-1 truncate text-xs text-[var(--primary-bright)]/90 hover:text-[var(--primary-bright)]"
                     >
                       <span className="truncate">
                         {p.url.replace(/^https?:\/\//, "")}

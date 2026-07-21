@@ -69,7 +69,7 @@ export default function MarketplacePage() {
                   <span className="text-sm font-medium text-zinc-100">
                     @{o.agentNametag}
                   </span>
-                  <span className="text-sm text-cyan-300">
+                  <span className="text-sm text-[var(--primary-bright)]">
                     {o.price} {o.currency}
                   </span>
                 </div>

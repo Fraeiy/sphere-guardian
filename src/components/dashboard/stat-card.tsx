@@ -7,44 +7,53 @@ export function StatCard({
   value,
   hint,
   icon: Icon,
-  accent = "cyan",
+  accent = "gold",
 }: {
   label: string;
   value: string;
   hint?: string;
   icon: LucideIcon;
-  accent?: "cyan" | "violet" | "emerald" | "amber" | "rose";
+  accent?: "gold" | "orange" | "crimson" | "emerald" | "amber";
 }) {
   const accents = {
-    cyan: "from-cyan-400/15 to-transparent text-cyan-300",
-    violet: "from-violet-400/15 to-transparent text-violet-300",
+    gold: "from-[rgba(232,163,23,0.2)] to-transparent text-[var(--primary-bright)]",
+    orange: "from-[rgba(232,122,26,0.2)] to-transparent text-[var(--orange)]",
+    crimson: "from-[rgba(201,58,42,0.2)] to-transparent text-[#e87a6a]",
     emerald: "from-emerald-400/15 to-transparent text-emerald-300",
-    amber: "from-amber-400/15 to-transparent text-amber-300",
-    rose: "from-rose-400/15 to-transparent text-rose-300",
+    amber: "from-[rgba(240,180,40,0.18)] to-transparent text-[#f0c14d]",
   };
 
   return (
     <Card className="overflow-hidden">
-      <CardContent className="relative p-5">
+      <CardContent className="relative p-4 sm:p-5">
+        {/* 3D bevel highlight */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[rgba(255,220,160,0.25)] to-transparent"
+        />
         <div
           className={cn(
-            "pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br opacity-80",
+            "pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-gradient-to-br opacity-90 blur-2xl",
             accents[accent]
           )}
         />
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="text-xs font-medium uppercase tracking-wider text-zinc-500">
+        <div className="relative flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)] sm:text-xs">
               {label}
             </div>
-            <div className="mt-2 text-2xl font-semibold tracking-tight text-zinc-50">
+            <div className="mt-2 truncate text-xl font-semibold tracking-tight text-[var(--foreground)] sm:text-2xl">
               {value}
             </div>
-            {hint && <div className="mt-1 text-xs text-zinc-500">{hint}</div>}
+            {hint && (
+              <div className="mt-1 text-[11px] leading-snug text-[var(--muted)] sm:text-xs">
+                {hint}
+              </div>
+            )}
           </div>
           <div
             className={cn(
-              "rounded-xl bg-gradient-to-br p-2.5 ring-1 ring-white/10",
+              "shrink-0 rounded-xl bg-gradient-to-br p-2.5 ring-1 ring-[var(--border-strong)] shadow-[0_8px_20px_-10px_rgba(0,0,0,0.8)]",
               accents[accent]
             )}
           >

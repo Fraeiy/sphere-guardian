@@ -53,7 +53,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>Network mode</CardTitle>
             <CardDescription>
-              Default is <code className="text-cyan-300">SPHERE_MODE=live</code> on
+              Default is <code className="text-[var(--primary-bright)]">SPHERE_MODE=live</code> on
               Unicity Testnet v2. Use <code className="text-zinc-300">mock</code> only
               for offline CI.
             </CardDescription>

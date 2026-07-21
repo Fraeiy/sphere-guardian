@@ -96,7 +96,7 @@ export default function AnalyticsPage() {
                 </div>
               </div>
               <a
-                className="text-sm text-cyan-300 hover:text-cyan-200"
+                className="text-sm text-[var(--primary-bright)] hover:text-[var(--primary-bright)]"
                 href={`/api/reports/${r.id}`}
               >
                 Export .md

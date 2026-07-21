@@ -4,22 +4,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/60 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]/50 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
   {
     variants: {
       variant: {
         default:
-          "bg-cyan-500/90 text-zinc-950 hover:bg-cyan-400 shadow-[0_0_24px_-8px_rgba(34,211,238,0.7)]",
+          "bg-gradient-to-b from-[var(--primary-bright)] to-[var(--primary-deep)] text-[#1a1205] shadow-[0_1px_0_rgba(255,240,200,0.35)_inset,0_8px_24px_-8px_rgba(232,163,23,0.55)] hover:brightness-110",
         secondary:
-          "bg-white/5 text-zinc-100 border border-white/10 hover:bg-white/10",
-        ghost: "hover:bg-white/5 text-zinc-300",
-        danger: "bg-rose-500/90 text-white hover:bg-rose-400",
+          "bg-white/[0.04] text-[var(--foreground)] border border-[var(--border-strong)] hover:bg-[rgba(232,163,23,0.08)] hover:border-[var(--primary)]/35",
+        ghost: "hover:bg-[rgba(232,163,23,0.08)] text-[var(--muted-strong)] hover:text-[var(--foreground)]",
+        danger:
+          "bg-gradient-to-b from-[var(--crimson)] to-[var(--crimson-deep)] text-white shadow-[0_8px_24px_-8px_rgba(201,58,42,0.55)] hover:brightness-110",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-11 rounded-xl px-6",
-        icon: "h-9 w-9",
+        default: "h-10 px-4 py-2 min-h-[40px]",
+        sm: "h-9 rounded-lg px-3 text-xs min-h-[36px]",
+        lg: "h-12 rounded-xl px-6 min-h-[48px]",
+        icon: "h-10 w-10 min-h-[40px] min-w-[40px]",
       },
     },
     defaultVariants: {

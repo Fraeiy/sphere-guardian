@@ -43,14 +43,14 @@ export default function OverviewPage() {
           value={`${formatNumber(state.walletBalance, 2)} ${state.walletCurrency}`}
           hint={state.identity.mode === "live" ? "Sphere Wallet (live)" : "Mock wallet"}
           icon={Wallet}
-          accent="cyan"
+          accent="gold"
         />
         <StatCard
           label="Open incidents"
           value={String(openIncidents)}
           hint={`${state.incidents.filter((i) => i.status === "resolved").length} resolved`}
           icon={AlertTriangle}
-          accent="amber"
+          accent="crimson"
         />
         <StatCard
           label="Healthy projects"
@@ -64,7 +64,7 @@ export default function OverviewPage() {
           value={`${state.projects.filter((p) => p.status === "healthy").length}/${state.projects.length || 0}`}
           hint="From live URL probes (not analytics users)"
           icon={Bot}
-          accent="violet"
+          accent="orange"
         />
       </div>
 
@@ -106,7 +106,7 @@ export default function OverviewPage() {
                           href={p.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-cyan-400/90 hover:text-cyan-300"
+                          className="text-[var(--primary-bright)] hover:text-[var(--primary)]"
                         >
                           {p.url.replace(/^https?:\/\//, "")}
                         </a>
@@ -160,8 +160,8 @@ export default function OverviewPage() {
             <Row label="Intents published" value={String(state.intents.length)} />
             <Row label="Settlements" value={String(state.settlements.length)} />
             <Row label="Service sales" value={String(state.serviceRequests.length)} />
-            <div className="flex items-center gap-2 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 text-xs text-cyan-100/90">
-              <Zap className="h-4 w-4 text-cyan-300" />
+            <div className="flex items-center gap-2 rounded-xl border border-[rgba(232,163,23,0.25)] bg-[rgba(232,163,23,0.08)] px-3 py-2.5 text-xs text-[#f5d78e]">
+              <Zap className="h-4 w-4 text-[var(--primary)]" />
               No manual approval after startup — full M2M loop.
             </div>
           </CardContent>

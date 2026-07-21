@@ -1,17 +1,62 @@
 @import "tailwindcss";
 
+/* Unicity Sphere palette — gold / amber / orange / crimson on deep void */
 :root {
-  --background: #05060a;
-  --foreground: #f4f4f5;
-  --card: #0c0d12;
-  --muted: #71717a;
-  --accent: #22d3ee;
-  --border: rgba(255, 255, 255, 0.07);
+  --background: #070605;
+  --background-elevated: #0e0c0a;
+  --foreground: #f7f1e8;
+  --card: #12100e;
+  --card-elevated: #1a1612;
+  --muted: #9a9084;
+  --muted-strong: #c4b8a8;
+
+  --primary: #e8a317;
+  --primary-bright: #f0b429;
+  --primary-deep: #c9890f;
+  --gold: #d4a017;
+  --gold-soft: #c9a227;
+  --orange: #e87a1a;
+  --orange-hot: #f05a1a;
+  --crimson: #c93a2a;
+  --crimson-deep: #9a241c;
+  --ember: #ff6b2c;
+
+  --primary-glow: rgba(232, 163, 23, 0.38);
+  --orange-glow: rgba(232, 122, 26, 0.28);
+  --crimson-glow: rgba(201, 58, 42, 0.22);
+
+  --border: rgba(232, 163, 23, 0.1);
+  --border-strong: rgba(232, 163, 23, 0.22);
+  --border-subtle: rgba(255, 245, 230, 0.06);
+
+  --surface-glass: rgba(18, 16, 14, 0.78);
+  --surface-glass-strong: rgba(14, 12, 10, 0.88);
+
+  --shadow-depth:
+    0 1px 0 rgba(255, 220, 160, 0.05) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.4),
+    0 18px 40px -14px rgba(0, 0, 0, 0.75),
+    0 6px 14px -8px rgba(0, 0, 0, 0.55);
+  --shadow-lift:
+    0 1px 0 rgba(255, 220, 160, 0.08) inset,
+    0 0 0 1px rgba(232, 163, 23, 0.12),
+    0 28px 56px -18px rgba(0, 0, 0, 0.85),
+    0 0 40px -16px rgba(232, 163, 23, 0.25);
+  --shadow-ember:
+    0 0 32px -8px rgba(232, 122, 26, 0.45),
+    0 12px 28px -12px rgba(0, 0, 0, 0.7);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-primary: var(--primary);
+  --color-gold: var(--gold);
+  --color-orange: var(--orange);
+  --color-crimson: var(--crimson);
+  --color-border: var(--border);
+  --color-muted-foreground: var(--muted);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -22,6 +67,8 @@
 
 html {
   color-scheme: dark;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -30,28 +77,132 @@ body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
-/* Subtle scrollbar */
+/* Ambient scene — CSS only, cheap on mobile */
+.unicity-scene {
+  background:
+    radial-gradient(ellipse 90% 60% at 10% -10%, rgba(232, 163, 23, 0.14), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 100% 0%, rgba(232, 122, 26, 0.1), transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(201, 58, 42, 0.08), transparent 55%),
+    radial-gradient(ellipse 50% 30% at 0% 80%, rgba(212, 160, 23, 0.06), transparent 50%),
+    var(--background);
+}
+
+.unicity-grid {
+  background-image:
+    linear-gradient(rgba(232, 163, 23, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 163, 23, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, black 20%, transparent 75%);
+}
+
+.unicity-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(48px);
+  opacity: 0.45;
+  pointer-events: none;
+  will-change: transform;
+  animation: orb-drift 18s ease-in-out infinite alternate;
+}
+
+.unicity-orb--gold {
+  background: radial-gradient(circle, rgba(232, 163, 23, 0.55), transparent 70%);
+}
+.unicity-orb--orange {
+  background: radial-gradient(circle, rgba(232, 122, 26, 0.4), transparent 70%);
+  animation-delay: -6s;
+  animation-duration: 22s;
+}
+.unicity-orb--crimson {
+  background: radial-gradient(circle, rgba(201, 58, 42, 0.35), transparent 70%);
+  animation-delay: -12s;
+  animation-duration: 26s;
+}
+
+/* Depth surfaces */
+.depth-card {
+  background:
+    linear-gradient(165deg, rgba(255, 220, 160, 0.04) 0%, transparent 42%),
+    linear-gradient(180deg, var(--card-elevated) 0%, var(--card) 100%);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-depth);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transform: translateZ(0);
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.depth-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-lift);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .depth-card:hover {
+    transform: translateY(-2px) translateZ(0);
+  }
+}
+
+.depth-panel {
+  background: var(--surface-glass);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-depth);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.depth-inset {
+  box-shadow:
+    0 1px 0 rgba(255, 220, 160, 0.04) inset,
+    0 0 0 1px rgba(0, 0, 0, 0.35) inset,
+    0 8px 20px -10px rgba(0, 0, 0, 0.6) inset;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.gold-ring {
+  box-shadow:
+    0 0 0 1px rgba(232, 163, 23, 0.25),
+    0 0 20px -4px rgba(232, 163, 23, 0.35);
+}
+
+.gold-text {
+  background: linear-gradient(135deg, #f5d78e 0%, #e8a317 45%, #e87a1a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.ember-glow {
+  box-shadow: var(--shadow-ember);
+}
+
+/* Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(232, 163, 23, 0.18);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(232, 163, 23, 0.32);
 }
 
+/* Motion */
 @keyframes fade-up {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -59,6 +210,78 @@ body {
   }
 }
 
+@keyframes orb-drift {
+  from {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  to {
+    transform: translate3d(12px, 18px, 0) scale(1.08);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
 .animate-fade-up {
-  animation: fade-up 0.35s ease-out both;
+  animation: fade-up 0.4s ease-out both;
+}
+
+.animate-shimmer {
+  background-size: 200% 200%;
+  animation: shimmer 6s ease infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .unicity-orb,
+  .animate-fade-up,
+  .animate-shimmer,
+  .depth-card {
+    animation: none !important;
+    transition: none !important;
+  }
+  .depth-card:hover {
+    transform: none;
+  }
+}
+
+/* Mobile performance: lighter blur + orbs */
+@media (max-width: 768px) {
+  .unicity-orb {
+    filter: blur(36px);
+    opacity: 0.32;
+  }
+  .depth-card,
+  .depth-panel {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
+
+/* Safe areas + touch */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-pb {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+}
+
+input,
+select,
+textarea,
+button {
+  font-size: max(16px, 1em);
+}
+
+@media (min-width: 640px) {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: inherit;
+  }
 }
