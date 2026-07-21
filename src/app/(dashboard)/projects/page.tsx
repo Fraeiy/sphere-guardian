@@ -12,18 +12,35 @@ type Filter = "all" | "app" | "infra";
 export default function ProjectsPage() {
   const { state } = useGuardian();
   const [filter, setFilter] = useState<Filter>("all");
-  if (!state) return null;
+
+  // Hooks must run unconditionally (before any early return).
+  const allProjects = state?.projects ?? [];
 
   const projects = useMemo(() => {
-    return state.projects.filter((p) => {
-      if (filter === "app") return p.tags.includes("app");
-      if (filter === "infra") return p.tags.includes("infra");
+    return allProjects.filter((p) => {
+      const tags = p.tags ?? [];
+      if (filter === "app") return tags.includes("app");
+      if (filter === "infra") return tags.includes("infra");
       return true;
     });
-  }, [state.projects, filter]);
+  }, [allProjects, filter]);
 
-  const appCount = state.projects.filter((p) => p.tags.includes("app")).length;
-  const infraCount = state.projects.filter((p) => p.tags.includes("infra")).length;
+  const appCount = useMemo(
+    () => allProjects.filter((p) => (p.tags ?? []).includes("app")).length,
+    [allProjects]
+  );
+  const infraCount = useMemo(
+    () => allProjects.filter((p) => (p.tags ?? []).includes("infra")).length,
+    [allProjects]
+  );
+
+  if (!state) {
+    return (
+      <div className="flex h-64 items-center justify-center text-sm text-zinc-500">
+        Loading projects…
+      </div>
+    );
+  }
 
   return (
     <div className="animate-fade-up space-y-6">
@@ -37,7 +54,7 @@ export default function ProjectsPage() {
         <div className="flex gap-2">
           {(
             [
-              ["all", `All (${state.projects.length})`],
+              ["all", `All (${allProjects.length})`],
               ["app", `Apps (${appCount})`],
               ["infra", `Infra (${infraCount})`],
             ] as const
@@ -67,7 +84,11 @@ export default function ProjectsPage() {
           </Card>
         )}
         {projects.map((p) => {
-          const isApp = p.tags.includes("app");
+          const tags = p.tags ?? [];
+          const isApp = tags.includes("app");
+          const lastChecked = p.lastCheckedAt
+            ? new Date(p.lastCheckedAt).toLocaleTimeString()
+            : "—";
           return (
             <Card key={p.id}>
               <CardHeader className="flex-row items-start justify-between gap-3">
@@ -87,7 +108,9 @@ export default function ProjectsPage() {
                       rel="noopener noreferrer"
                       className="mt-1.5 inline-flex max-w-full items-center gap-1 truncate text-xs text-cyan-300/90 hover:text-cyan-200"
                     >
-                      <span className="truncate">{p.url.replace(/^https?:\/\//, "")}</span>
+                      <span className="truncate">
+                        {p.url.replace(/^https?:\/\//, "")}
+                      </span>
                       <ExternalLink className="h-3 w-3 shrink-0" />
                     </a>
                   ) : (
@@ -108,25 +131,49 @@ export default function ProjectsPage() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
-                  <Metric label="Latency" value={`${Math.round(p.apiLatencyMs)}ms`} />
-                  <Metric label="Response" value={`${Math.round(p.responseTimeMs)}ms`} />
-                  <Metric label="Uptime" value={formatPct(p.uptimePct)} />
-                  <Metric label="Failures" value={formatPct(p.failureRatePct)} />
-                  <Metric label="Users (est.)" value={String(p.activeUsers)} />
-                  <Metric label="Agents (est.)" value={String(p.activeAgents)} />
+                  <Metric
+                    label="Latency"
+                    value={`${Math.round(p.apiLatencyMs ?? 0)}ms`}
+                  />
+                  <Metric
+                    label="Response"
+                    value={`${Math.round(p.responseTimeMs ?? 0)}ms`}
+                  />
+                  <Metric label="Uptime" value={formatPct(p.uptimePct ?? 0)} />
+                  <Metric
+                    label="Failures"
+                    value={formatPct(p.failureRatePct ?? 0)}
+                  />
+                  <Metric
+                    label="Users (est.)"
+                    value={String(p.activeUsers ?? 0)}
+                  />
+                  <Metric
+                    label="Agents (est.)"
+                    value={String(p.activeAgents ?? 0)}
+                  />
                 </div>
                 <div className="mt-4 flex flex-wrap gap-1.5">
-                  {p.tags
+                  {tags
                     .filter((t) => !t.startsWith("http-"))
                     .slice(0, 8)
                     .map((t) => (
-                      <Badge key={t} tone={t === "up" ? "success" : t === "down" ? "danger" : "neutral"}>
+                      <Badge
+                        key={t}
+                        tone={
+                          t === "up"
+                            ? "success"
+                            : t === "down"
+                              ? "danger"
+                              : "neutral"
+                        }
+                      >
                         {t}
                       </Badge>
                     ))}
                 </div>
                 <div className={`mt-3 text-xs ${statusColor(p.status)}`}>
-                  Last checked {new Date(p.lastCheckedAt).toLocaleTimeString()}
+                  Last checked {lastChecked}
                 </div>
               </CardContent>
             </Card>
@@ -140,7 +187,9 @@ export default function ProjectsPage() {
 function Metric({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg bg-white/[0.02] px-2.5 py-2 ring-1 ring-white/[0.04]">
-      <div className="text-[10px] uppercase tracking-wide text-zinc-500">{label}</div>
+      <div className="text-[10px] uppercase tracking-wide text-zinc-500">
+        {label}
+      </div>
       <div className="mt-0.5 font-medium text-zinc-200">{value}</div>
     </div>
   );
